@@ -55,6 +55,32 @@ import type {
 import type { AnyColumn, BuildQueryConfig } from 'drizzle-orm';
 import type { AnyBuilder, AnySchema, AnyTable } from '~/types';
 
+function getChunk(v: any) {
+  if (is(v, Column)) {
+    //console.log("COL1", v);
+    return v;
+    //return { name: "TODO1" };
+  }
+  else {
+    console.log("RET", v);
+    return { name: "TODO" };
+  }
+
+}
+function getCols(entry: any) {
+  // console.log("INDEXENTRY", entry);
+  let ret = undefined;
+  if (is(entry, SQL)) {
+    ret = entry.queryChunks.map(getChunk)
+    console.log("INDEXENTRY1", ret);
+  } else {
+    ret = (entry as Column);
+    console.log("INDEXENTRY2", ret);
+  }
+
+  return ret;
+}
+
 export abstract class BaseGenerator<
   Schema extends AnySchema = AnySchema,
   Column extends AnyColumn = AnyColumn
@@ -185,11 +211,9 @@ export abstract class BaseGenerator<
       for (const indexName in indexes) {
         const index = indexes[indexName].build(table);
         dbml.tab(2);
-
+        console.log("INDEX", index);
         if (is(index, PgIndex) || is(index, MySqlIndex) || is(index, SQLiteIndex)) {
-          const configColumns = index.config.columns.flatMap((entry) =>
-            is(entry, SQL) ? entry.queryChunks.filter((v) => is(v, Column)) : (entry as Column)
-          );
+          const configColumns = index.config.columns.flatMap(getCols);
 
           const idxColumns = wrapColumns(
             configColumns as AnyColumn[],
@@ -298,9 +322,8 @@ export abstract class BaseGenerator<
           (relations_[i].table as unknown as AnyTable)[TableName],
           relation.referencedTableName
         ].sort();
-        const key = `${tableNames[0]}-${tableNames[1]}${
-          relation.relationName ? `-${relation.relationName}` : ''
-        }`;
+        const key = `${tableNames[0]}-${tableNames[1]}${relation.relationName ? `-${relation.relationName}` : ''
+          }`;
 
         if ((is(relation, One) && relation.config?.references.length) || 0 > 0) {
           left[key] = {

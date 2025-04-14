@@ -14,12 +14,19 @@ export function formatList(
 }
 
 export function wrapColumns(columns: AnyColumn[], escapeName: (name: string) => string) {
+  //console.log("COLUMNS", columns);
   const formatted = formatList(
-    columns.map((column) => column.name),
+    columns.map((column) => column ? column.name : "MISSING_COLUMN"),
     escapeName,
     true
   );
-  return columns.length === 1 ? columns[0].name : `(${formatted})`;
+  if (columns.length === 1) {
+    return columns[0] ? columns[0].name : "noname";
+  }
+  else {
+    return `(${formatted})`;
+  }
+
 }
 
 export function wrapColumnNames(columns: string[], escapeName: (name: string) => string) {
