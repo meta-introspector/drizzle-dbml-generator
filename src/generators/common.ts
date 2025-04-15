@@ -54,6 +54,7 @@ import type {
 } from '~/symbols';
 import type { AnyColumn, BuildQueryConfig } from 'drizzle-orm';
 import type { AnyBuilder, AnySchema, AnyTable } from '~/types';
+import { getTableName } from "drizzle-orm";
 
 function getChunk(v: any) {
   if (is(v, Column)) {
@@ -62,20 +63,45 @@ function getChunk(v: any) {
     //return { name: "TODO1" };
   }
   else {
-    console.log("RET", v);
+      //console.log("RET", v);
     return { name: "TODO" };
   }
 
 }
+
+
+function getName(obj:any) {
+
+    if (typeof(obj) == "string") {
+	return obj
+    } else {
+    
+    console.log("getName",typeof(obj), Object.keys(obj))
+    if(obj.name) {
+	return getName(obj.name)
+    }
+    else {
+	const text= getTableName(obj);
+	if (text) {
+	    //console.log("HELP",text)
+	    return text
+	} else {
+	    //console.log("HELP2",obj)
+	    return undefined
+	}
+    }
+    }
+}
+    
 function getCols(entry: any) {
   // console.log("INDEXENTRY", entry);
   let ret = undefined;
   if (is(entry, SQL)) {
-    ret = entry.queryChunks.map(getChunk)
-    console.log("INDEXENTRY1", ret);
+      ret = entry.queryChunks.map(getChunk)
+      //console.log("INDEXENTRY1", ret);
   } else {
     ret = (entry as Column);
-    console.log("INDEXENTRY2", ret);
+      //console.log("INDEXENTRY2", ret);
   }
 
   return ret;
@@ -102,7 +128,8 @@ export abstract class BaseGenerator<
 
   constructor(schema: Schema, relational: boolean) {
     this.schema = schema;
-    this.relational = relational;
+      this.relational = relational;
+
   }
 
   protected isIncremental(_column: Column) {
@@ -165,9 +192,9 @@ export abstract class BaseGenerator<
   }
 
   protected generateTable(table: AnyTable) {
-    if (!this.relational) {
+      if (!this.relational) {
       this.generateForeignKeys(table[this.InlineForeignKeys as typeof AnyInlineForeignKeys]);
-    }
+    } 
 
     const dbml = new DBML().insert('table ');
 
@@ -211,7 +238,7 @@ export abstract class BaseGenerator<
       for (const indexName in indexes) {
         const index = indexes[indexName].build(table);
         dbml.tab(2);
-        console.log("INDEX", index);
+//        console.log("INDEX", index);
         if (is(index, PgIndex) || is(index, MySqlIndex) || is(index, SQLiteIndex)) {
           const configColumns = index.config.columns.flatMap(getCols);
 
@@ -263,6 +290,12 @@ export abstract class BaseGenerator<
       const sourceColumns = fks[i].reference().columns;
       const foreignColumns = fks[i].reference().foreignColumns;
 
+	const keyname = `ref ${fks[i].getName()}: `;
+	//console.log("generateForeignKeys1",i,keyname )
+	
+//	console.log("generateForeignKeys1",i,getName(sourceTable) )
+	//console.log("generateForeignKeys2",i,getName(foreignTable))
+	//console.log("generateForeignKeys3",i,keyname)
       const dbml = new DBML().insert(`ref ${fks[i].getName()}: `);
 
       if (sourceSchema) {
@@ -290,8 +323,10 @@ export abstract class BaseGenerator<
       ];
       const actionsStr = ` [${formatList(actions, this.buildQueryConfig.escapeName)}]`;
 
-      dbml.insert(actionsStr);
-      this.generatedRefs.push(dbml.build());
+	dbml.insert(actionsStr);
+	const total = dbml.build();
+	//console.log("TOTAL",total)
+      this.generatedRefs.push(total);
     }
   }
 
@@ -410,6 +445,7 @@ export abstract class BaseGenerator<
       .concatAll(this.generatedRefs)
       .build();
 
+      //console.log("DBML",dbml)
     return dbml;
   }
 }
